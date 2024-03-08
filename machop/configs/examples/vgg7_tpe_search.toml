@@ -1,16 +1,16 @@
 # basics
-model = "jsc-tiny"
-dataset = "jsc"
+model = "vgg7"
+dataset = "cifar10"
 task = "cls"
 
-max_epochs = 5
+max_epochs = 5512
 batch_size = 512
-learning_rate = 1e-2
+learning_rate = 1e-3
 accelerator = "gpu"
-project = "jsc-tiny"
+project = "vgg7"
 seed = 42
 log_every_n_steps = 5
-load_name = "/home/lch121600/ADLSlab/mase/mase_output/jsc-tiny_classification_jsc_2024-02-06/software/training_ckpts/best.ckpt"
+load_name = "/home/lch121600/ADLSlab/mase/mase_output/vgg7_classification_cifar10_2024-02-21/test-accu-0.9332.ckpt"
 load_type = "pl"
 
 [passes.quantize]
@@ -26,11 +26,31 @@ name = "integer"
 "bias_width" = 8
 "bias_frac_width" = 4
 
+[passes.quantize.conv2d.config]
+name = "integer"
+"data_in_width" = 8
+"data_in_frac_width" = 4
+"weight_width" = 8
+"weight_frac_width" = 4
+"bias_width" = 8
+"bias_frac_width" = 4
+
+[passes.quantize.batch_norm2d.config]
+name = "integer"
+"data_in_width" = 8
+"data_in_frac_width" = 4
+"weight_width" = 8
+"weight_frac_width" = 4
+"bias_width" = 8
+"bias_frac_width" = 4
+
+
+
 [search.search_space]
 name = "graph/quantize/mixed_precision_ptq"
 
 [search.search_space.setup]
-by = "name"
+by = "type"
 
 [search.search_space.seed.default.config]
 # the only choice "NA" is used to indicate that layers are not quantized by default
@@ -39,22 +59,33 @@ name = ["NA"]
 [search.search_space.seed.linear.config]
 # if search.search_space.setup.by = "type", this seed will be used to quantize all torch.nn.Linear/ F.linear
 name = ["integer"]
-data_in_width = [4, 8]
+data_in_width = [16, 8, 4]
 data_in_frac_width = ["NA"] # "NA" means data_in_frac_width = data_in_width // 2
 weight_width = [2, 4, 8]
 weight_frac_width = ["NA"]
 bias_width = [2, 4, 8]
 bias_frac_width = ["NA"]
 
-[search.search_space.seed.seq_blocks_2.config]
-# if search.search_space.setup.by = "name", this seed will be used to quantize the mase graph node with name "seq_blocks_2"
+[search.search_space.seed.conv2d.config]
+# if search.search_space.setup.by = "type", this seed will be used to quantize all torch.nn.Linear/ F.linear
 name = ["integer"]
-data_in_width = [4, 8]
-data_in_frac_width = ["NA"]
+data_in_width = [16, 8, 4]
+data_in_frac_width = ["NA"] # "NA" means data_in_frac_width = data_in_width // 2
 weight_width = [2, 4, 8]
 weight_frac_width = ["NA"]
 bias_width = [2, 4, 8]
 bias_frac_width = ["NA"]
+
+[search.search_space.seed.batch_norm2d.config]
+# if search.search_space.setup.by = "type", this seed will be used to quantize all torch.nn.Linear/ F.linear
+name = ["integer"]
+data_in_width = [ 16, 8, 4]
+data_in_frac_width = ["NA"] # "NA" means data_in_frac_width = data_in_width // 2
+weight_width = [2, 4, 8]
+weight_frac_width = ["NA"]
+bias_width = [2, 4, 8]
+bias_frac_width = ["NA"]
+
 
 [search.strategy]
 name = "optuna"
@@ -71,7 +102,8 @@ compare_to = 32 # compare to FP32
 n_jobs = 1
 n_trials = 20
 timeout = 20000
-sampler = "brute-force"
+sampler = "tpe"
+#sampler = "brute-force"
 # sum_scaled_metrics = true # single objective
 # direction = "maximize"
 sum_scaled_metrics = false # multi objective

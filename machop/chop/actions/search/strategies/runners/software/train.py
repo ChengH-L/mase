@@ -147,7 +147,7 @@ class RunnerBasicTrain(SWRunnerBase):
         )
         num_batches = math.ceil(num_samples / data_module.batch_size)
 
-        # ddp_sampler = DistributedSampler(data_module.train_dataset)
+        #ddp_sampler = DistributedSampler(data_module.train_dataset)
 
         train_dataloader = data_module.train_dataloader()
         steps_per_epoch = len(train_dataloader)

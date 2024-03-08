@@ -80,7 +80,7 @@ def transform(
         graph, _ = add_software_metadata_analysis_pass(graph, pass_args=None)
 
     pass_config = config["passes"]
-
+    
     for pass_name, pass_config in pass_config.items():
         pass_name: str
         pass_config: dict
@@ -95,6 +95,7 @@ def transform(
                 PASSES["summarize_quantization"](
                     ori_graph, graph, save_dir=pass_save_dir
                 )
+                print(PASSES)
             case "profile_statistics":
                 input_generator = InputGenerator(
                     model_info=model_info,

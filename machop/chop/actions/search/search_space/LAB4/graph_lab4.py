@@ -1,5 +1,6 @@
 # This is the search space for mixed-precision post-training-quantization quantization search on mase graph.
 from copy import deepcopy
+from chop.passes.graph import report_graph_analysis_pass
 from torch import nn
 from ..base import SearchSpaceBase
 from .....passes.graph.transforms.quantize import (
@@ -11,25 +12,15 @@ from .....passes.graph import (
     init_metadata_analysis_pass,
     add_common_metadata_analysis_pass,
 )
-from .....passes.graph.utils import get_mase_op, get_mase_type
+from .....passes.graph.utils import get_mase_op, get_mase_type, get_parent_name
 from ..utils import flatten_dict, unflatten_dict
 from collections import defaultdict
 
-DEFAULT_QUANTIZATION_CONFIG = {
-    "config": {
-        "name": "integer",
-        "bypass": True,
-        "bias_frac_width": 5,
-        "bias_width": 8,
-        "data_in_frac_width": 5,
-        "data_in_width": 8,
-        "weight_frac_width": 3,
-        "weight_width": 8,
-    }
+DEFAULT_BLOCK_CONFIG = {
+    "config": {"name": None}
 }
 
-
-class GraphSearchSpaceMixedPrecisionPTQ(SearchSpaceBase):
+class ArchitectureSearchSpace(SearchSpaceBase):
     """
     Post-Training quantization search space for mase graph.
     """
@@ -38,7 +29,7 @@ class GraphSearchSpaceMixedPrecisionPTQ(SearchSpaceBase):
         self.model.to("cpu")  # save this copy of the model to cpu
         self.mg = None
         self._node_info = None
-        self.default_config = DEFAULT_QUANTIZATION_CONFIG
+        self.default_config = DEFAULT_BLOCK_CONFIG 
 
         # quantize the model by type or name
         assert (
@@ -55,7 +46,6 @@ class GraphSearchSpaceMixedPrecisionPTQ(SearchSpaceBase):
             self.model.train()
 
         if self.mg is None:
-            print(self.model_info)
             assert self.model_info.is_fx_traceable, "Model must be fx traceable"
             mg = MaseGraph(self.model)
             mg, _ = init_metadata_analysis_pass(mg, None)
@@ -64,7 +54,8 @@ class GraphSearchSpaceMixedPrecisionPTQ(SearchSpaceBase):
             )
             self.mg = mg
         if sampled_config is not None:
-            mg, _ = quantize_transform_pass(self.mg, sampled_config)
+            mg, _ = redefine_linear_transform_pass(graph=self.mg, pass_args={"config": sampled_config})
+        
         mg.model.to(self.accelerator)
         return mg
 
@@ -92,22 +83,18 @@ class GraphSearchSpaceMixedPrecisionPTQ(SearchSpaceBase):
 
         match self.config["setup"]["by"]:
             case "name":
-                # iterate through all the quantizeable nodes in the graph
-                # if the node_name is in the seed, use the node seed search space
-                # else use the default search space for the node
+                
                 for n_name, n_info in node_info.items():
-                    if n_info["mase_op"] in QUANTIZEABLE_OP:
+                    if n_info["mase_op"] in QUANTIZEABLE_OP :
                         if n_name in seed:
                             choices[n_name] = deepcopy(seed[n_name])
                         else:
                             choices[n_name] = deepcopy(seed["default"])
             case "type":
-                # iterate through all the quantizeable nodes in the graph
-                # if the node mase_op is in the seed, use the node seed search space
-                # else use the default search space for the node
+                
                 for n_name, n_info in node_info.items():
                     n_op = n_info["mase_op"]
-                    if n_op in QUANTIZEABLE_OP:
+                    if n_op in QUANTIZEABLE_OP :
                         if n_op in seed:
                             choices[n_name] = deepcopy(seed[n_op])
                         else:
@@ -162,3 +149,74 @@ class GraphSearchSpaceMixedPrecisionPTQ(SearchSpaceBase):
         config["default"] = self.default_config
         config["by"] = self.config["setup"]["by"]
         return config
+
+
+
+def instantiate_linear(in_features, out_features, bias):
+    if bias is not None:
+        bias = True
+    return nn.Linear(
+        in_features=in_features,
+        out_features=out_features,
+        bias=bias)
+
+def redefine_linear_transform_pass(graph, pass_args=None):
+    print(pass_args)
+    main_config = pass_args.pop('config')
+    default = main_config.pop('default', None)
+    if default is None:
+        raise ValueError(f"default value must be provided.")
+    i = 0
+    last_linear_multi = 1
+    for node in graph.fx_graph.nodes:
+        i += 1
+        # if node name is not matched, it won't be tracked
+        config = main_config.get(node.name, default)['config']
+        name = config.get("name", None)
+        if name is not None:
+            ori_module = graph.modules[node.target]
+            in_features = ori_module.in_features
+            out_features = ori_module.out_features
+            bias = ori_module.bias
+            if name == "output_only":
+                out_features = out_features * config["channel_multiplier"]
+                in_features = in_features*last_linear_multi
+                last_linear_multi = config["channel_multiplier"]
+            elif name == "both":
+                in_features = in_features * config["channel_multiplier"]
+                out_features = out_features * config["channel_multiplier"]
+            elif name == "input_only":
+                in_features = in_features * last_linear_multi
+                
+
+            new_module = instantiate_linear(in_features, out_features, bias)
+            parent_name, name = get_parent_name(node.target)
+            setattr(graph.modules[parent_name], name, new_module)
+
+    _ = report_graph_analysis_pass(graph)
+    return graph, {}
+
+pass_config = {
+"by": "name",
+"default": {"config": {"name": None}},
+
+"seq_blocks_2": {
+    "config": {
+        "name": "output_only",
+        "channel_multiplier": 2,
+        }
+    },
+"seq_blocks_4": {
+    "config": {
+        "name": "output_only",
+        "channel_multiplier": 2,
+        }
+    },
+
+"seq_blocks_6": {
+    "config": {
+        "name": "output_only",
+        "channel_multiplier": 2,
+        }
+    },
+}

@@ -53,7 +53,9 @@ class SearchStrategyBase:
         self.sw_runner = []
         self.hw_runner = []
         # the software runner's __call__ will use the rebuilt model to calculate the software metrics like accuracy, loss, ...
-
+        
+        print(config["sw_runner"])
+        print(model_info)
         for runner_name, runner_cfg in config["sw_runner"].items():
             self.sw_runner.append(
                 get_sw_runner(

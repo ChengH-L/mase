@@ -80,7 +80,59 @@ class JSC_S(nn.Module):
         for l in self.module_list:
             x = l(x)
         return x
+    
 
+
+class JSC_lch(nn.Module):
+    def __init__(self, info):
+        super(JSC_lch, self).__init__()
+
+        # # Assuming input dimensions and number of classes from 'info'
+        # num_classes = info.get('num_classes', 10)  # default to 10 classes if not specified
+        # input_features = info.get('input_features', 16)  # default input feature size
+
+        # Define a significantly larger fully connected network
+        self.seq_blocks = nn.Sequential(
+                        
+            nn.BatchNorm1d(16),  # input_quant       # 0
+            nn.ReLU(16),
+            nn.Linear(16, 32),           # Second layer
+            nn.ReLU(32),
+            nn.Linear(32, 64),          # Third layer
+            nn.ReLU(64),
+            nn.Linear(64, 32),          # Fourth layer
+            nn.BatchNorm1d(32),
+            nn.ReLU(32),
+            nn.Linear(32, 16),           # Fifth layer
+            nn.BatchNorm1d(16),
+            nn.ReLU(16),
+            nn.Linear(16, 5), 
+
+            nn.ReLU(5),    # Output layer
+        )
+
+    def forward(self, x):
+        return self.seq_blocks(x)
+    
+
+
+class JSC_Three_Linear_Layers(nn.Module):
+    def __init__(self,info):
+        super(JSC_Three_Linear_Layers, self).__init__()
+        self.seq_blocks = nn.Sequential(
+            nn.BatchNorm1d(16),  # 0
+            nn.ReLU(),  # 1
+            nn.Linear(16, 16),  # linear seq_2
+            nn.ReLU(),  # 3
+            nn.Linear(16, 16),  # linear seq_4
+            nn.ReLU(),  # 5
+            nn.Linear(16, 5),  # linear seq_6
+            nn.ReLU(5),  # 7
+        )
+
+    def forward(self, x):
+        return self.seq_blocks(x)
+    
 
 # Getters ------------------------------------------------------------------------------
 def get_jsc_toy(info):
@@ -94,3 +146,11 @@ def get_jsc_tiny(info):
 
 def get_jsc_s(info):
     return JSC_S(info)
+
+def get_jsc_lch(info):
+    return JSC_lch(info)
+
+def get_jsc_three_linear_layers(info):
+    return JSC_Three_Linear_Layers(info)
+
+
