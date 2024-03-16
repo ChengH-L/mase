@@ -1,28 +1,28 @@
 from ..base import SearchStrategyBase
 from .env import env_map
-from stable_baselines3 import A2C, PPO
+from stable_baselines3 import A2C, PPO, DDPG, TD3
 from stable_baselines3.common.callbacks import (
     CallbackList,
     CheckpointCallback,
     EvalCallback,
 )
 
-
 algorithm_map = {
     # TODO: maybe network architecture needs complication.
     "ppo": PPO,
     "a2c": A2C,
+    "td3": TD3
 }
 
 
 class StrategyRL(SearchStrategyBase):
     iterative = True
 
-    def _setup(self):
+    def _post_init_setup(self):
         setup = self.config["setup"]
         self.model_parallel = setup["model_parallel"]
         self.runner_style = setup["runner_style"]
-        self.runner = self.get_runner(self.runner_style)
+        # self.runner = self.get_runner(self.runner_style)
 
         self.algorithm_name = setup["algorithm"]
         # self.device = setup["device"]
@@ -32,16 +32,24 @@ class StrategyRL(SearchStrategyBase):
         self.env_name = setup["env"]
         self.env = env_map[self.env_name]
         self.algorithm = algorithm_map[self.algorithm_name]
+        self.sum_scaled_metrics = setup["sum_scaled_metrics"]
+
+        self.metrics = self.config["metrics"]
 
     def search(self, search_space):
-        env = self.env(config={"search_space": search_space, "runner": self.runner})
-
+        # env = self.env(config={"search_space": search_space, "runner": self.runner})
+        env = self.env(config={"search_space": search_space,
+                               "hw_runner": self.hw_runner,
+                               "sw_runner": self.sw_runner,
+                               "sum_scaled_metrics": self.sum_scaled_metrics,
+                               "data_module": self.data_module,
+                               "metrics": self.metrics})
         checkpoint_callback = CheckpointCallback(save_freq=1000, save_path="./logs/")
         eval_callback = EvalCallback(
             env,
             best_model_save_path="./logs/best_model",
             log_path="./logs/results",
-            eval_freq=500,
+            eval_freq=100,
         )
         callback = CallbackList([checkpoint_callback, eval_callback])
 
@@ -52,14 +60,14 @@ class StrategyRL(SearchStrategyBase):
             "MultiInputPolicy",
             env,
             verbose=1,
-            device=self.device,
+            # device=self.device,
             tensorboard_log="./logs/",
         )
 
         vec_env = model.get_env()
         model.learn(
             total_timesteps=int(self.total_timesteps),
-            progress_bar=True,
+            # progress_bar=True,
             callback=callback,
         )
 
@@ -73,4 +81,5 @@ class StrategyRL(SearchStrategyBase):
         for _ in range(1000):
             action, _state = model.predict(obs, deterministic=True)
             obs, reward, done, info = vec_env.step(action)
-        return obs["loss"], obs, model
+            print(obs["reward"])
+        return obs["reward"], obs, model

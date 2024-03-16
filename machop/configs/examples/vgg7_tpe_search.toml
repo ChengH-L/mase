@@ -59,32 +59,32 @@ name = ["NA"]
 [search.search_space.seed.linear.config]
 # if search.search_space.setup.by = "type", this seed will be used to quantize all torch.nn.Linear/ F.linear
 name = ["integer"]
-data_in_width = [16, 8, 4]
+data_in_width = [4, 8, 16, 32]
 data_in_frac_width = ["NA"] # "NA" means data_in_frac_width = data_in_width // 2
-weight_width = [2, 4, 8]
+weight_width = [4, 8, 16, 32]
 weight_frac_width = ["NA"]
-bias_width = [2, 4, 8]
+bias_width = [4, 8, 16, 32]
 bias_frac_width = ["NA"]
 
-[search.search_space.seed.conv2d.config]
+[search.search_space.seed.conv2d.config]	
 # if search.search_space.setup.by = "type", this seed will be used to quantize all torch.nn.Linear/ F.linear
 name = ["integer"]
-data_in_width = [16, 8, 4]
+data_in_width = [4, 8, 16, 32]
 data_in_frac_width = ["NA"] # "NA" means data_in_frac_width = data_in_width // 2
-weight_width = [2, 4, 8]
+weight_width = [4, 8, 16, 32]
 weight_frac_width = ["NA"]
-bias_width = [2, 4, 8]
+bias_width = [4, 8, 16, 32]
 bias_frac_width = ["NA"]
 
-[search.search_space.seed.batch_norm2d.config]
+# [search.search_space.seed.batch_norm2d.config]
 # if search.search_space.setup.by = "type", this seed will be used to quantize all torch.nn.Linear/ F.linear
-name = ["integer"]
-data_in_width = [ 16, 8, 4]
-data_in_frac_width = ["NA"] # "NA" means data_in_frac_width = data_in_width // 2
-weight_width = [2, 4, 8]
-weight_frac_width = ["NA"]
-bias_width = [2, 4, 8]
-bias_frac_width = ["NA"]
+# name = ["integer"]
+# data_in_width = [ 16, 8, 4]
+# data_in_frac_width = ["NA"] # "NA" means data_in_frac_width = data_in_width // 2
+# weight_width = [2, 4, 8]
+# weight_frac_width = ["NA"]
+# bias_width = [2, 4, 8]
+# bias_frac_width = ["NA"]
 
 
 [search.strategy]
