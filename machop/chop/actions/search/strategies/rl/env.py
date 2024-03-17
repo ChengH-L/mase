@@ -233,12 +233,12 @@ class MixedPrecisionEnv(gym.Env):
         # get performance
         metrics, new_obs = self.objective(action)
 
-
-
         # TODO: this reward needs redesign, apparently
         # reward here is positive, the smaller the better,
         # since return -reward in the end
-        reward = 100*(1-metrics[0]) #+ (metrics[1])
+        reward = 100 * (1 - metrics[0]) + (metrics[1]) #+ 50
+        if metrics[0] > 0.5:
+            reward += -50
         # Set a new observation (random sample).
         new_obs["reward"] = np.array([metrics[0]]).reshape((1,))
         # new_obs["metrics"] = metrics
@@ -247,13 +247,13 @@ class MixedPrecisionEnv(gym.Env):
         #         rebuild_sample[f"{k}_and_{k2}"] = v2
         self.cur_obs = new_obs
 
-
         # Set `truncated` flag after 10 steps.
         self.episode += 1
         terminated = False
-        if self.episode % 4 == 0:
+        if self.episode % 20 == 0:
             truncated = True
-            # print(f"Episode: {self.episode}, truncated: {truncated}, reward: {reward}")
+            print(f"Episode: {self.episode}, reward: {reward}, accuracy: {metrics[0]}, average_bit: {metrics[1]}")
+
         else:
             truncated = False
             # print(f"Episode: {self.episode}, reward: {reward}, accuracy: {metrics[0]}, average_bit: {metrics[1]}")

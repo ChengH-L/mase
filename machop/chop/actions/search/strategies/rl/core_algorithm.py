@@ -36,6 +36,7 @@ class StrategyRL(SearchStrategyBase):
 
         self.metrics = self.config["metrics"]
 
+        self.mode=setup["mode"]
     def search(self, search_space):
         # env = self.env(config={"search_space": search_space, "runner": self.runner})
         env = self.env(config={"search_space": search_space,
@@ -52,34 +53,72 @@ class StrategyRL(SearchStrategyBase):
             eval_freq=100,
         )
         callback = CallbackList([checkpoint_callback, eval_callback])
-
+        method = 0
         # possible extension is to allow custom policy network
         # https://stable-baselines3.readthedocs.io/en/master/guide/custom_policy.html
+        if self.mode == 'train':
+            print("training from sketch")
+            model = self.algorithm(
+                "MultiInputPolicy",
+                env,
+                verbose=1,
+                # device=self.device,
+                tensorboard_log="./logs/",
+            )
 
-        model = self.algorithm(
-            "MultiInputPolicy",
-            env,
-            verbose=1,
-            # device=self.device,
-            tensorboard_log="./logs/",
-        )
+            vec_env = model.get_env()
+            model.learn(
+                total_timesteps=int(self.total_timesteps),
+                # progress_bar=True,
+                callback=callback,
+            )
 
-        vec_env = model.get_env()
-        model.learn(
-            total_timesteps=int(self.total_timesteps),
-            # progress_bar=True,
-            callback=callback,
-        )
+            # TODO
+            # improvements needed
+            # drop this to mase_output
+            model.save(self.save_name)
+            obs = vec_env.reset()
+            for _ in range(1000):
+                action, _state = model.predict(obs, deterministic=True)
+                obs, reward, done, info = vec_env.step(action)
+                print(obs["reward"])
+            return obs["reward"], obs, model
+        elif self.mode == 'continue-training':
+            print("Continue training")
+            # Continue Training
+            model = self.algorithm.load(
+                "/home/super_monkey/PycharmProjects/mase/logs/Monkey's favourites/rl_model_3000.zip",
+                env=env
+            )
 
-        # TODO
-        # improvements needed
-        # drop this to mase_output
-        model.save(self.save_name)
+            vec_env = model.get_env()
+            model.learn(
+                total_timesteps=int(self.total_timesteps),
+                # progress_bar=True,
+                callback=callback,
+            )
+            obs = vec_env.reset()
+            for _ in range(1000):
+                action, _state = model.predict(obs, deterministic=True)
+                print(action)
+                obs, reward, done, info = vec_env.step(action)
+                print(obs["reward"])
+            return obs["reward"], obs, model
+        elif self.mode == 'load':
+            print("Loading model")
+            model = self.algorithm.load(
+                "/home/super_monkey/PycharmProjects/mase/logs/rl_model_8000.zip",
+                env=env
+            )
 
-        # inference run, but not needed?
-        obs = vec_env.reset()
-        for _ in range(1000):
-            action, _state = model.predict(obs, deterministic=True)
-            obs, reward, done, info = vec_env.step(action)
-            print(obs["reward"])
-        return obs["reward"], obs, model
+            vec_env = model.get_env()
+            obs = vec_env.reset()
+            for _ in range(1000):
+                action, _state = model.predict(obs, deterministic=True)
+                print(action)
+                obs, reward, done, info = vec_env.step(action)
+                print(obs["reward"])
+            return obs["reward"], obs, model
+        else:
+            print(self.mode, " not implemented")
+            return None
