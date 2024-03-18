@@ -4,5 +4,5 @@ search --config /home/super_monkey/PycharmProjects/mase/machop/configs/examples/
 
 search --config /home/super_monkey/PycharmProjects/mase/machop/configs/examples/vgg7_rl_search.toml --load /home/super_monkey/PycharmProjects/mase/mase_output/vgg7_classification_cifar10_2024-02-21/test-accu-0.9332.ckpt
 
-
+./ch search --config /home/super_monkey/PycharmProjects/mase/machop/configs/examples/vgg7_rl_search.toml --load /home/super_monkey/PycharmProjects/mase/mase_output/vgg7_classification_cifar10_2024-02-21/test-accu-0.9332.ckpt
 

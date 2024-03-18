@@ -104,9 +104,9 @@ n_trials = 20
 timeout = 20000
 sampler = "tpe"
 #sampler = "brute-force"
-# sum_scaled_metrics = true # single objective
-# direction = "maximize"
 sum_scaled_metrics = false # multi objective
+#direction = "maximize"
+#sum_scaled_metrics = true # single objective
 
 [search.strategy.metrics]
 # loss.scale = 1.0

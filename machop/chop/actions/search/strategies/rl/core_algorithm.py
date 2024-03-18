@@ -7,6 +7,7 @@ from stable_baselines3.common.callbacks import (
     EvalCallback,
 )
 
+
 algorithm_map = {
     # TODO: maybe network architecture needs complication.
     "ppo": PPO,
@@ -107,17 +108,20 @@ class StrategyRL(SearchStrategyBase):
         elif self.mode == 'load':
             print("Loading model")
             model = self.algorithm.load(
-                "/home/super_monkey/PycharmProjects/mase/logs/rl_model_8000.zip",
+                "/home/super_monkey/PycharmProjects/mase/logs/rl_model_3000_steps.zip",
                 env=env
             )
 
             vec_env = model.get_env()
             obs = vec_env.reset()
-            for _ in range(1000):
+            for _ in range(20):
                 action, _state = model.predict(obs, deterministic=True)
-                print(action)
+                # print(action)
                 obs, reward, done, info = vec_env.step(action)
-                print(obs["reward"])
+                # print(obs["reward"])
+            print()
+            print()
+            print(f"Best model: Accuracy={env.result[0]}, Average Bit Width={env.result[1]}")
             return obs["reward"], obs, model
         else:
             print(self.mode, " not implemented")

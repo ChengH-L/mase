@@ -72,7 +72,7 @@ algorithm = 'a2c'
 env = 'mixed_precision'
 total_timesteps = 32000
 save_name = 'test'
-mode='continue-training'
+mode='load'
 
 model_parallel = false
 runner_style = "lm"
